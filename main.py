@@ -11,7 +11,7 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Create a booklet-formatted PDF with custom layout options.")
     parser.add_argument("--input", "-i", type=str, help="Input PDF file path", required=False)
     parser.add_argument("--output", "-o", type=str, help="Output PDF file path", required=False)
-    parser.add_argument("--x_adjust", type=int, default=7, help="Horizontal shift for textbox placement (default: 7)")
+    parser.add_argument("--x_adjust", type=int, default=212, help="Horizontal shift for textbox placement (default: 212)")
     parser.add_argument("--y_adjust", type=int, default=25, help="Vertical shift for textbox placement (default: 25)")
     parser.add_argument("--skip_count", type=int, default=5, help="How many initial placements to skip numbering (default: 5)")
     parser.add_argument("--left_page_x_adjust", type=float, default=0, help="Horizontal offset for left page placement (default: 0)")

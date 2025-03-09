@@ -61,48 +61,60 @@ def create_booklet(input_pdf: str, output_pdf: str, x_adjust: int, y_adjust: int
     add_blank_pages(doc)
     booklet_order = get_booklet_order(doc.page_count)
     logging.getLogger(__name__).info("Booklet order: %s", booklet_order)
-    
+
     new_doc = fitz.open()
     page_width, page_height = fitz.paper_size(paper_size)
     sheet_size = (page_height, page_width) if orientation.lower() == "landscape" else (page_width, page_height)
 
-    # Define positions for numbering text boxes with adjustments.
+    ## Define positions for numbering text boxes with mirrored adjustments.
     y_start = sheet_size[1] - 80 + y_adjust
     y_end = sheet_size[1] - 50 + y_adjust
-    left_center_x = sheet_size[0] / 4 + x_adjust
-    right_center_x = 3 * sheet_size[0] / 4 + x_adjust
+    center_x = sheet_size[0] / 2
+    x_adjust_default = sheet_size[0] / 4  # Default so numbers are centered within each half
+    left_center_x = center_x - x_adjust_default
+    right_center_x = center_x + x_adjust_default
     left_num_rect = fitz.Rect(left_center_x - 20, y_start, left_center_x + 20, y_end)
     right_num_rect = fitz.Rect(right_center_x - 20, y_start, right_center_x + 20, y_end)
-    
+
+    # Apply mirroring logic: If right_page_x_adjust is None or same as left, mirror it.
+    if right_page_x_adjust is None or right_page_x_adjust == left_page_x_adjust:
+        right_page_x_adjust = left_page_x_adjust
+
+    # Maintain default column positioning, but allow adjustments toward or away from the center.
+    left_offset = -left_page_x_adjust  # Move left column left (-) or toward center (+)
+    right_offset = right_page_x_adjust  # Move right column right (+) or toward center (-)
+    left_rect = fitz.Rect(0 + left_offset, page_y_adjust, center_x + left_offset, sheet_size[1] + page_y_adjust)
+    right_rect = fitz.Rect(center_x + right_offset, page_y_adjust, sheet_size[0] + right_offset, sheet_size[1] + page_y_adjust)
+
     # Process booklet_order in blocks of 4 placements.
     for i in range(0, len(booklet_order), 4):
         # First new page (two placements)
         sheet = new_doc.new_page(width=sheet_size[0], height=sheet_size[1])
-        right_rect = fitz.Rect((sheet_size[0] / 2) + right_page_x_adjust, 0 + page_y_adjust,
-                               sheet_size[0] + right_page_x_adjust, sheet_size[1] + page_y_adjust)
-        left_rect = fitz.Rect(0 + left_page_x_adjust, 0 + page_y_adjust,
-                              (sheet_size[0] / 2) + left_page_x_adjust, sheet_size[1] + page_y_adjust)
+
         if i < len(booklet_order):
             safe_show_pdf_page(sheet, right_rect, doc, booklet_order[i] - 1)
             if i >= skip_count:
                 page_num = booklet_order[i] - (skip_count - 2)
                 sheet.insert_textbox(right_num_rect, str(page_num),
                                      fontsize=font_size, fontname=font_name, color=font_color, align=1)
+
         if i + 1 < len(booklet_order):
             safe_show_pdf_page(sheet, left_rect, doc, booklet_order[i + 1] - 1)
             if i + 1 >= skip_count:
                 page_num = booklet_order[i + 1] - (skip_count - 2)
                 sheet.insert_textbox(left_num_rect, str(page_num),
                                      fontsize=font_size, fontname=font_name, color=font_color, align=1)
-        
+
         # Second new page (two placements)
         sheet = new_doc.new_page(width=sheet_size[0], height=sheet_size[1])
+
         if i + 2 < len(booklet_order):
             safe_show_pdf_page(sheet, right_rect, doc, booklet_order[i + 2] - 1)
             if i + 2 >= skip_count:
                 page_num = booklet_order[i + 2] - (skip_count - 2)
                 sheet.insert_textbox(right_num_rect, str(page_num),
                                      fontsize=font_size, fontname=font_name, color=font_color, align=1)
+
         if i + 3 < len(booklet_order):
             safe_show_pdf_page(sheet, left_rect, doc, booklet_order[i + 3] - 1)
             if i + 3 >= skip_count:

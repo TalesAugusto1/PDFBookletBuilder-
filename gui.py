@@ -42,7 +42,6 @@ def gui_main(args) -> None:
             y_adj = int(y_adjust_entry.get().strip())
             skip = int(skip_count_entry.get().strip())
             left_x = float(left_page_x_entry.get().strip())
-            right_x = float(right_page_x_entry.get().strip())
             page_y = float(page_y_adjust_entry.get().strip())
             paper = paper_size_var.get().strip().lower()
             orient = orientation_var.get().strip().lower()
@@ -51,16 +50,21 @@ def gui_main(args) -> None:
             f_color = tuple(float(x.strip()) for x in font_color_entry.get().split(","))
             if len(f_color) != 3:
                 raise ValueError("Font color must be in R,G,B format")
+
+            # If mirroring is enabled, right_x should be the same as left_x
+            right_x = left_x if mirror_var.get() else float(right_page_x_entry.get().strip())
+
         except Exception as e:
             messagebox.showerror("Error", f"Invalid parameter: {e}")
             return
-        
+
         try:
             create_booklet(input_path, output_path, x_adj, y_adj, skip, left_x, right_x, page_y,
-                           paper, orient, f_name, f_size, f_color)
+                        paper, orient, f_name, f_size, f_color)
             messagebox.showinfo("Success", f"Booklet PDF saved as '{output_path}'")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to create booklet: {e}")
+
 
     # Main window configuration
     root = tk.Tk()
@@ -160,6 +164,35 @@ def gui_main(args) -> None:
     font_color_entry = ttk.Entry(font_frame, width=20)
     font_color_entry.insert(0, args.font_color)
     font_color_entry.grid(row=2, column=1, padx=5, pady=2, sticky="ew")
+   # Add a BooleanVar to track mirroring state
+    mirror_var = tk.BooleanVar(value=True)  # Default: Mirroring enabled
+
+    def toggle_mirroring():
+        """Enable/disable independent adjustment of right-side offset."""
+        if mirror_var.get():
+            right_page_x_entry.config(state=tk.DISABLED)
+            right_page_x_entry.delete(0, tk.END)
+            right_page_x_entry.insert(0, left_page_x_entry.get())  # Mirror left-side value
+        else:
+            right_page_x_entry.config(state=tk.NORMAL)
+
+    def update_right_value(*args):
+        """When mirroring is enabled, update right-side value dynamically."""
+        if mirror_var.get():
+            right_page_x_entry.delete(0, tk.END)
+            right_page_x_entry.insert(0, left_page_x_entry.get())
+
+    # Checkbox to enable mirroring
+    mirror_checkbox = ttk.Checkbutton(settings_frame, text="Mirror left/right offsets",
+                                    variable=mirror_var, command=toggle_mirroring)
+    mirror_checkbox.grid(row=6, column=0, columnspan=2, sticky="w", padx=5, pady=2)
+
+    # Link left entry to update right when mirroring is enabled
+    left_page_x_entry.bind("<KeyRelease>", update_right_value)
+
+    # Apply initial mirroring state
+    toggle_mirroring()
+
     
     # Overwrite option
     overwrite_var = tk.BooleanVar(value=args.overwrite)
@@ -178,7 +211,7 @@ def gui_main(args) -> None:
 if __name__ == '__main__':
     # Dummy args for testing
     class DefaultArgs:
-        x_adjust = 7
+        x_adjust = 212
         y_adjust = 25
         skip_count = 5
         left_page_x_adjust = 0
