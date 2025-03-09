@@ -1,9 +1,13 @@
 import fitz
 import sys
-import argparse
 import logging
 import os
 from typing import List
+
+def transparent_input(prompt: str, default: str) -> str:
+    """Displays input prompt with a transparent default value that reappears if erased."""
+    user_input = input(f"{prompt} ({default} DEFAULT): ")
+    return user_input.strip() if user_input.strip() != "" else default
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -50,12 +54,14 @@ def safe_show_pdf_page(sheet: fitz.Page, rect: fitz.Rect, doc: fitz.Document, pa
         else:
             raise
 
-def create_booklet(input_pdf: str, output_pdf: str, x_adjust: int, y_adjust: int, skip_count: int) -> None:
+def create_booklet(input_pdf: str, output_pdf: str, x_adjust: int, y_adjust: int, skip_count: int,
+                   left_page_x_adjust: float, right_page_x_adjust: float, page_y_adjust: float) -> None:
     """
     Creates a booklet-formatted PDF with column labels preserving the original orientation.
     
     The process includes adding blank pages to ensure the total is a multiple of 4,
     determining the booklet order, and placing page numbers after an initial skip.
+    The positions for page placements are adjusted using the provided column adjustment parameters.
     """
     try:
         doc = fitz.open(input_pdf)
@@ -87,57 +93,38 @@ def create_booklet(input_pdf: str, output_pdf: str, x_adjust: int, y_adjust: int
     for i in range(0, len(booklet_order), 4):
         # First new page (contains two placements)
         sheet = new_doc.new_page(width=landscape_size[0], height=landscape_size[1])
+        # Define adjusted rectangles for page placements:
+        right_rect = fitz.Rect((landscape_size[0] / 2) + right_page_x_adjust, 0 + page_y_adjust,
+                               landscape_size[0] + right_page_x_adjust, landscape_size[1] + page_y_adjust)
+        left_rect = fitz.Rect(0 + left_page_x_adjust, 0 + page_y_adjust,
+                              (landscape_size[0] / 2) + left_page_x_adjust, landscape_size[1] + page_y_adjust)
         if i < len(booklet_order):
-            safe_show_pdf_page(
-                sheet,
-                fitz.Rect(landscape_size[0] / 2, 0, landscape_size[0], landscape_size[1]),
-                doc, booklet_order[i] - 1
-            )
+            safe_show_pdf_page(sheet, right_rect, doc, booklet_order[i] - 1)
             if i >= skip_count:
                 page_num = booklet_order[i] - (skip_count - 2)
-                sheet.insert_textbox(
-                    right_num_rect, str(page_num),
-                    fontsize=16, fontname="times-roman", color=(0, 0, 0), align="center"
-                )
+                sheet.insert_textbox(right_num_rect, str(page_num),
+                                     fontsize=16, fontname="times-roman", color=(0, 0, 0), align="center")
         if i + 1 < len(booklet_order):
-            safe_show_pdf_page(
-                sheet,
-                fitz.Rect(0, 0, landscape_size[0] / 2, landscape_size[1]),
-                doc, booklet_order[i + 1] - 1
-            )
+            safe_show_pdf_page(sheet, left_rect, doc, booklet_order[i + 1] - 1)
             if i + 1 >= skip_count:
                 page_num = booklet_order[i + 1] - (skip_count - 2)
-                sheet.insert_textbox(
-                    left_num_rect, str(page_num),
-                    fontsize=16, fontname="times-roman", color=(0, 0, 0), align="center"
-                )
+                sheet.insert_textbox(left_num_rect, str(page_num),
+                                     fontsize=16, fontname="times-roman", color=(0, 0, 0), align="center")
         
         # Second new page (contains two placements)
         sheet = new_doc.new_page(width=landscape_size[0], height=landscape_size[1])
         if i + 2 < len(booklet_order):
-            safe_show_pdf_page(
-                sheet,
-                fitz.Rect(landscape_size[0] / 2, 0, landscape_size[0], landscape_size[1]),
-                doc, booklet_order[i + 2] - 1
-            )
+            safe_show_pdf_page(sheet, right_rect, doc, booklet_order[i + 2] - 1)
             if i + 2 >= skip_count:
                 page_num = booklet_order[i + 2] - (skip_count - 2)
-                sheet.insert_textbox(
-                    right_num_rect, str(page_num),
-                    fontsize=16, fontname="times-roman", color=(0, 0, 0), align="center"
-                )
+                sheet.insert_textbox(right_num_rect, str(page_num),
+                                     fontsize=16, fontname="times-roman", color=(0, 0, 0), align="center")
         if i + 3 < len(booklet_order):
-            safe_show_pdf_page(
-                sheet,
-                fitz.Rect(0, 0, landscape_size[0] / 2, landscape_size[1]),
-                doc, booklet_order[i + 3] - 1
-            )
+            safe_show_pdf_page(sheet, left_rect, doc, booklet_order[i + 3] - 1)
             if i + 3 >= skip_count:
                 page_num = booklet_order[i + 3] - (skip_count - 2)
-                sheet.insert_textbox(
-                    left_num_rect, str(page_num),
-                    fontsize=16, fontname="times-roman", color=(0, 0, 0), align="center"
-                )
+                sheet.insert_textbox(left_num_rect, str(page_num),
+                                     fontsize=16, fontname="times-roman", color=(0, 0, 0), align="center")
 
     try:
         new_doc.save(output_pdf)
@@ -147,27 +134,23 @@ def create_booklet(input_pdf: str, output_pdf: str, x_adjust: int, y_adjust: int
         sys.exit(1)
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Create a booklet formatted PDF.")
-    parser.add_argument("input_pdf", help="Path to the input PDF file.")
-    parser.add_argument("output_pdf", help="Path to the output booklet PDF file.")
-    parser.add_argument("--x-adjust", type=int, default=7,
-                        help="Horizontal shift for textbox placement (default: 7)")
-    parser.add_argument("--y-adjust", type=int, default=25,
-                        help="Vertical shift for textbox placement (default: 25)")
-    parser.add_argument("--skip-count", type=int, default=5,
-                        help="How many initial placements to skip numbering (default: 5)")
-    parser.add_argument("--overwrite", action="store_true",
-                        help="Overwrite the output file if it already exists")
-    args = parser.parse_args()
-
-    # Check if the output file already exists and confirm overwrite.
-    if os.path.exists(args.output_pdf) and not args.overwrite:
-        response = input(f"Output file '{args.output_pdf}' already exists. Overwrite? (y/n): ")
-        if response.lower() != 'y':
-            logger.info("Exiting without overwriting output file.")
-            sys.exit(0)
-
-    create_booklet(args.input_pdf, args.output_pdf, args.x_adjust, args.y_adjust, args.skip_count)
+    # Interactive input for parameters
+    input_pdf = input("Enter input PDF path: ")
+    output_pdf = input("Enter output PDF path: ")
+    x_adjust = int(transparent_input("Enter horizontal shift for textbox placement", "7"))
+    y_adjust = int(transparent_input("Enter vertical shift for textbox placement", "25"))
+    skip_count = int(transparent_input("Enter how many initial placements to skip numbering", "5"))
+    left_page_x_adjust = float(transparent_input("Enter horizontal offset for left page placement", "0"))
+    right_page_x_adjust = float(transparent_input("Enter horizontal offset for right page placement", "0"))
+    page_y_adjust = float(transparent_input("Enter vertical offset for page placements", "0"))
+    overwrite = input("Overwrite existing output file? (y/n) (n DEFAULT): ") or "n"
+    
+    if os.path.exists(output_pdf) and overwrite.lower() != 'y':
+        logger.info("Exiting without overwriting output file.")
+        sys.exit(0)
+    
+    create_booklet(input_pdf, output_pdf, x_adjust, y_adjust, skip_count,
+                   left_page_x_adjust, right_page_x_adjust, page_y_adjust)
 
 if __name__ == "__main__":
     main()
