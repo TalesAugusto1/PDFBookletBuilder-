@@ -25,7 +25,7 @@ pip install pymupdf
 
 The script has been refactored into multiple files for better maintainability:
 
-```
+```bash
 your_project/
 ├── main.py      # Entry point, handles CLI & GUI selection
 ├── booklet.py   # Core logic for creating booklet PDFs

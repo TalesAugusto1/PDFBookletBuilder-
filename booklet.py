@@ -70,9 +70,9 @@ def create_booklet(input_pdf: str, output_pdf: str, x_adjust: int, y_adjust: int
     y_start = sheet_size[1] - 80 + y_adjust
     y_end = sheet_size[1] - 50 + y_adjust
     center_x = sheet_size[0] / 2
-    x_adjust_default = sheet_size[0] / 4  # Default so numbers are centered within each half
-    left_center_x = center_x - x_adjust_default
-    right_center_x = center_x + x_adjust_default
+    default_offset = sheet_size[0] / 4
+    left_center_x = center_x - x_adjust
+    right_center_x = center_x + x_adjust
     left_num_rect = fitz.Rect(left_center_x - 20, y_start, left_center_x + 20, y_end)
     right_num_rect = fitz.Rect(right_center_x - 20, y_start, right_center_x + 20, y_end)
 
