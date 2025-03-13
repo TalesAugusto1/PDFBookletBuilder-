@@ -70,7 +70,6 @@ def create_booklet(input_pdf: str, output_pdf: str, x_adjust: int, y_adjust: int
     y_start = sheet_size[1] - 80 + y_adjust
     y_end = sheet_size[1] - 50 + y_adjust
     center_x = sheet_size[0] / 2
-    default_offset = sheet_size[0] / 4
     left_center_x = center_x - x_adjust
     right_center_x = center_x + x_adjust
     left_num_rect = fitz.Rect(left_center_x - 20, y_start, left_center_x + 20, y_end)
@@ -93,15 +92,16 @@ def create_booklet(input_pdf: str, output_pdf: str, x_adjust: int, y_adjust: int
 
         if i < len(booklet_order):
             safe_show_pdf_page(sheet, right_rect, doc, booklet_order[i] - 1)
-            if i >= skip_count:
-                page_num = booklet_order[i] - (skip_count - 2)
+            # Only number if the booklet order digit is greater than skip_count.
+            if booklet_order[i] > skip_count:
+                page_num = booklet_order[i] - skip_count
                 sheet.insert_textbox(right_num_rect, str(page_num),
                                      fontsize=font_size, fontname=font_name, color=font_color, align=1)
 
         if i + 1 < len(booklet_order):
             safe_show_pdf_page(sheet, left_rect, doc, booklet_order[i + 1] - 1)
-            if i + 1 >= skip_count:
-                page_num = booklet_order[i + 1] - (skip_count - 2)
+            if booklet_order[i + 1] > skip_count:
+                page_num = booklet_order[i + 1] - skip_count
                 sheet.insert_textbox(left_num_rect, str(page_num),
                                      fontsize=font_size, fontname=font_name, color=font_color, align=1)
 
@@ -110,15 +110,15 @@ def create_booklet(input_pdf: str, output_pdf: str, x_adjust: int, y_adjust: int
 
         if i + 2 < len(booklet_order):
             safe_show_pdf_page(sheet, right_rect, doc, booklet_order[i + 2] - 1)
-            if i + 2 >= skip_count:
-                page_num = booklet_order[i + 2] - (skip_count - 2)
+            if booklet_order[i + 2] > skip_count:
+                page_num = booklet_order[i + 2] - skip_count
                 sheet.insert_textbox(right_num_rect, str(page_num),
                                      fontsize=font_size, fontname=font_name, color=font_color, align=1)
 
         if i + 3 < len(booklet_order):
             safe_show_pdf_page(sheet, left_rect, doc, booklet_order[i + 3] - 1)
-            if i + 3 >= skip_count:
-                page_num = booklet_order[i + 3] - (skip_count - 2)
+            if booklet_order[i + 3] > skip_count:
+                page_num = booklet_order[i + 3] - skip_count
                 sheet.insert_textbox(left_num_rect, str(page_num),
                                      fontsize=font_size, fontname=font_name, color=font_color, align=1)
 
